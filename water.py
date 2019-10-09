@@ -29,10 +29,21 @@ def calibrate_gauge(inputfile):
     #gray = cv2.GaussianBlur(gray, (5, 5), 0)
     #gray = cv2.medianBlur(gray, 5)
 
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 20, np.array([]), 100, 40, 30, 50)
-    # average found circles, found it to be more accurate than trying to tune HoughCircles parameters to get just the right one
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 10, np.array([]), 35, 35, 30, 50)
+
     a, b, c = circles.shape
-    x,y,r = avg_circles(circles, b)
+    x = 0
+    for i in range(b):
+        if (x < int(circles[0][i][0])):
+            x = int(circles[0][i][0])
+            y = int(circles[0][i][1])
+            r = int(circles[0][i][2])
+            
+        center = (int(circles[0][i][0]), int(circles[0][i][1]))
+        radius = int(circles[0][i][2])
+        cv2.circle(gray, center, radius, (0, 0, 255), 3, cv2.LINE_AA)  # draw circle
+    cv2.imwrite('circles.jpg', gray)
+    #x,y,r = avg_circles(circles, b)
 
     #draw center and circle
     cv2.circle(img, (x, y), r, (0, 0, 255), 3, cv2.LINE_AA)  # draw circle
@@ -119,8 +130,8 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
     # find pointer arrow
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Create a mask so that we use only the red arrows
-    lower_red = np.array([0, 40, 20]) 
-    upper_red = np.array([25, 255, 255])
+    lower_red = np.array([0, 10, 10]) 
+    upper_red = np.array([30, 255, 255])
     mask = cv2.inRange(hsv, lower_red, upper_red)
     cv2.imwrite("hsv.png", mask)
     res = cv2.bitwise_and(img, img, mask = mask)
