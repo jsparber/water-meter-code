@@ -29,7 +29,7 @@ def calibrate_gauge(inputfile):
     #gray = cv2.GaussianBlur(gray, (5, 5), 0)
     #gray = cv2.medianBlur(gray, 5)
 
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 10, np.array([]), 35, 35, 30, 50)
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 20, np.array([]), 30, 30, 35, 50)
 
     a, b, c = circles.shape
     x = 0
@@ -130,20 +130,20 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
     # find pointer arrow
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Create a mask so that we use only the red arrows
-    lower_red = np.array([0, 10, 10]) 
-    upper_red = np.array([30, 255, 255])
+    lower_red = np.array([0, 0, 0]) 
+    upper_red = np.array([40, 255, 255])
+    hsv = cv2.medianBlur(hsv, 17)
     mask = cv2.inRange(hsv, lower_red, upper_red)
     cv2.imwrite("hsv.png", mask)
     res = cv2.bitwise_and(img, img, mask = mask)
-    edges = cv2.Canny(res, 300, 400, apertureSize=5)
+    edges = cv2.Canny(res, 100, 400, apertureSize=5)
     vis = img.copy()
     #vis = np.uint8(vis/2.)
     #vis[edges != 0] = (0, 255, 0)
 
 
     #Getting and Displaying Contours
-    im2,contours,hierarchy=cv2.findContours(edges.copy(),cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
-    #cv2.drawContours(vis, contours, -1, (0, 255, 0), 1)
+    im2,contours,hierarchy=cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
 
     cv2.drawContours(vis, contours,-1,(255, 255, 0), 1)
 
