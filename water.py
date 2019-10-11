@@ -2,20 +2,8 @@ import sys, getopt
 import cv2
 import numpy as np
 import time
-
-def avg_circles(circles, b):
-    avg_x=0
-    avg_y=0
-    avg_r=0
-    for i in range(b):
-        #optional - average for multiple circles (can happen when a gauge is at a slight angle)
-        avg_x = avg_x + circles[0][i][0]
-        avg_y = avg_y + circles[0][i][1]
-        avg_r = avg_r + circles[0][i][2]
-    avg_x = int(avg_x/(b))
-    avg_y = int(avg_y/(b))
-    avg_r = int(avg_r/(b))
-    return avg_x, avg_y, avg_r
+import os
+from datetime import datetime
 
 def dist_2_pts(x1, y1, x2, y2):
     return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
@@ -33,6 +21,7 @@ def calibrate_gauge(inputfile):
 
     a, b, c = circles.shape
     x = 0
+    i = 0
     for i in range(b):
         if (x < int(circles[0][i][0])):
             x = int(circles[0][i][0])
@@ -42,12 +31,23 @@ def calibrate_gauge(inputfile):
         center = (int(circles[0][i][0]), int(circles[0][i][1]))
         radius = int(circles[0][i][2])
         cv2.circle(gray, center, radius, (0, 0, 255), 3, cv2.LINE_AA)  # draw circle
+
+    x2 = 0
+    for i in range(b):
+        if (x2 < int(circles[0][i][0]) and int(circles[0][i][0]) < x):
+            x2 = int(circles[0][i][0])
+            y2 = int(circles[0][i][1])
+            r2 = int(circles[0][i][2])
+     
     cv2.imwrite('circles.jpg', gray)
-    #x,y,r = avg_circles(circles, b)
 
     #draw center and circle
     cv2.circle(img, (x, y), r, (0, 0, 255), 3, cv2.LINE_AA)  # draw circle
     cv2.circle(img, (x, y), 2, (0, 255, 0), 3, cv2.LINE_AA)  # draw center of circle
+
+    # Draw secound circle
+    cv2.circle(img, (x2, y2), r2, (0, 0, 255), 3, cv2.LINE_AA)  # draw circle
+    cv2.circle(img, (x2, y2), 2, (0, 255, 0), 3, cv2.LINE_AA)  # draw center of circle
 
     #for testing, output circles on image
     cv2.imwrite('gauge-%s-circles.%s' % (gauge_number, file_type), img)
@@ -91,7 +91,7 @@ def calibrate_gauge(inputfile):
 
     cv2.imwrite('gauge-%s-calibration.%s' % (gauge_number, file_type), img)
 
-    return x, y, r
+    return x, y, r, x2, y2, r2
 
 def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, inputfile):
     gauge_number = 1
@@ -136,6 +136,7 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
     mask = cv2.inRange(hsv, lower_red, upper_red)
     cv2.imwrite("hsv.png", mask)
     res = cv2.bitwise_and(img, img, mask = mask)
+    cv2.imwrite("res.jpg", res)
     edges = cv2.Canny(res, 100, 400, apertureSize=5)
     vis = img.copy()
     #vis = np.uint8(vis/2.)
@@ -238,15 +239,30 @@ def main(argv):
         print 'python2.7 analog_gauge_reader.py -i <inputfile>'
         sys.exit(2)
 
-    print 'Input file is ', inputfile
-
+#    print 'Input file is ', inputfile
 
     # Find the correct circle
-    x, y, r = calibrate_gauge(inputfile)
+    x, y, r, x2, y2, r2 = calibrate_gauge(inputfile)
 
     img = cv2.imread(inputfile)
     val = get_current_value(img, 0, 360, 0, 10, x, y, r, inputfile)
-    print ("Reading: %s" %(val))
+
+    # This is the secound gauge showing 10l
+    val2 = get_current_value(img, 0, 360, 0, 10, x2, y2, r2, inputfile)
+
+    base = os.path.basename(inputfile)
+    filename = os.path.splitext(base)[0]
+    date = datetime.strptime(filename, '%Y%m%d%H%M')
+
+    '''
+    Output format has to look like this
+    { "date": "2014-01-01",
+      "value": 20000000
+    },
+    '''
+    final_value = round(val) *100 + (round(val2)*10)
+    print ("{\"date\": \"%s\", \"value\": %s}," %(date, final_value))
+    #print ("Reading: %s" %(round(val, 1)))
 
 if __name__=='__main__':
     main(sys.argv[1:])
