@@ -5,6 +5,31 @@ import time
 import os
 from datetime import datetime
 
+def get_angle(hand,centre):
+    x_h=hand[0]
+    y_h=hand[1]
+    x_c=centre[0]
+    y_c=centre[1]
+
+    x_diff=x_h-x_c
+    y_diff=y_h-y_c
+    x_diff=float(x_diff)
+    y_diff=float(y_diff)
+
+    if(x_diff*y_diff>0):
+        if(x_diff>=0 and y_diff>0):
+            angle=np.pi-np.arctan(x_diff/y_diff)
+        elif(x_diff<=0 and y_diff<0):
+            angle=2*np.pi-np.arctan(x_diff/y_diff)
+    elif(x_diff*y_diff<0):
+        if(y_diff>=0 and x_diff<0):
+            angle=(3*np.pi)/4+np.arctan(x_diff/y_diff)
+        elif(y_diff<=0 and x_diff>0):
+            angle=-np.arctan(x_diff/y_diff)
+
+    return angle
+
+
 def dist_2_pts(x1, y1, x2, y2):
     return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
@@ -129,14 +154,29 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
 
     # find pointer arrow
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    '''
     # Create a mask so that we use only the red arrows
     lower_red = np.array([0, 0, 0]) 
     upper_red = np.array([40, 255, 255])
     hsv = cv2.medianBlur(hsv, 17)
     mask = cv2.inRange(hsv, lower_red, upper_red)
     cv2.imwrite("hsv.png", mask)
+    '''
+    # Range for lower red
+    lower_red = np.array([0, 30, 30])
+    upper_red = np.array([10, 255, 255])
+    mask1 = cv2.inRange(hsv, lower_red, upper_red)
+
+    # Range for upper range
+    lower_red = np.array([170, 30, 30])
+    upper_red = np.array([180, 255, 255])
+    mask2 = cv2.inRange(hsv, lower_red, upper_red)
+
+    # Generating the final mask to detect red color
+    mask = mask1+mask2
+    cv2.imwrite("mask.png", mask)
+
     res = cv2.bitwise_and(img, img, mask = mask)
-    cv2.imwrite("res.jpg", res)
     edges = cv2.Canny(res, 100, 400, apertureSize=5)
     vis = img.copy()
     #vis = np.uint8(vis/2.)
@@ -144,7 +184,7 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
 
 
     #Getting and Displaying Contours
-    im2,contours,hierarchy=cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+    im2,contours,hierarchy=cv2.findContours(mask, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
 
     cv2.drawContours(vis, contours,-1,(255, 255, 0), 1)
 
@@ -202,7 +242,8 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
     if x_angle > 0 and y_angle < 0:  #in quadrant IV
         final_angle = 270 - res
 
-    #print final_angle - 180
+    # 180 degress is 0
+    old_value = (final_angle + 180) % 360
 
     old_min = float(min_angle)
     old_max = float(max_angle)
@@ -210,13 +251,9 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
     new_min = float(min_value)
     new_max = float(max_value)
 
-    # Flip the scale
-    old_value = final_angle - 180
-
     old_range = (old_max - old_min)
     new_range = (new_max - new_min)
     new_value = (((old_value - old_min) * new_range) / old_range) + new_min
-    # 180 degress is 0
 
     return new_value
 
@@ -257,12 +294,12 @@ def main(argv):
     '''
     Output format has to look like this
     { "date": "2014-01-01",
-      "value": 20000000
+      "value1": 2 // * 100
+      "value2": 2 // * 10
     },
     '''
-    final_value = round(val) *100 + (round(val2)*10)
-    print ("{\"date\": \"%s\", \"value\": %s}," %(date, final_value))
-    #print ("Reading: %s" %(round(val, 1)))
+    final_value = (int(val) * 100) + (round(val2, 1) * 10)
+    print ("{\"date\": \"%s\", \"value1\": %s, \"value2\": %s}," %(date, round (val, 3), round (val2, 3)))
 
 if __name__=='__main__':
     main(sys.argv[1:])
