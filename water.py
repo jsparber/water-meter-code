@@ -108,7 +108,7 @@ def get_current_value(img, min_angle, max_angle, min_value, max_value, x, y, r, 
     edges = cv2.Canny(res, 100, 400, apertureSize=5)
 
     #Getting and Displaying Contours
-    im2,contours,hierarchy=cv2.findContours(mask, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+    contours, _ =cv2.findContours(mask, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
 
     #cv2.drawContours(img, contours,-1,(255, 255, 0), 1)
 
@@ -187,20 +187,18 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hi:o",["ifile="])
     except getopt.GetoptError:
-        print 'python2.7 analog_gauge_reader.py -i <inputfile>'
+        print ('python analog_gauge_reader.py -i <inputfile>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'python2.7 analog_gauge_reader.py -i <inputfile>'
+            print ('python analog_gauge_reader.py -i <inputfile>')
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
 
     if (inputfile == ''):
-        print 'python2.7 analog_gauge_reader.py -i <inputfile>'
+        print ('python analog_gauge_reader.py -i <inputfile>')
         sys.exit(2)
-
-#    print 'Input file is ', inputfile
 
     # Find the correct circle
     x, y, r, x2, y2, r2 = calibrate_gauge(inputfile)
