@@ -1,8 +1,9 @@
 #!/bin/bash
 
-new_value=$1
+image=$1
 cd /home/alarm/water-meter-data/
 git pull origin master
+new_value=`python /home/alarm/code/water.py -i /home/alarm/img/$image`
 
 mv data.js data.tmp
 echo "var dataSeries = [" > data.js
